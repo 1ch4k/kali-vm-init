@@ -1,4 +1,4 @@
-# kali-vm-init
+**# kali-vm-init
 
 A single script to configure a fresh Kali Linux VM with a consistent, repeatable pentest environment.
 
@@ -18,8 +18,8 @@ A single script to configure a fresh Kali Linux VM with a consistent, repeatable
 ## Usage
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/kali-bootstrap.git
-cd kali-bootstrap
+git clone https://github.com/1ch4k/kali-vm-init.git
+cd kali-vm-init
 chmod +x kali-setup.sh
 ./kali-setup.sh
 source ~/.bashrc
@@ -28,7 +28,7 @@ source ~/.bashrc
 One-liner on a fresh machine:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/kali-bootstrap/main/kali-setup.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/1ch4k/kali-vm-init/main/kali-setup.sh)
 ```
 
 ---
@@ -119,8 +119,7 @@ $HOME/
 
 ## Requirements
 
-- Kali Linux rolling (2024.x / 2025.x)
-- Non-root user with sudo access
+- Kali Linux rolling
 - Desktop environment for CopyQ GUI (XFCE, GNOME, etc.)
 - Internet access for `apt` and `git`
 

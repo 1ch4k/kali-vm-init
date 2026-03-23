@@ -1,4 +1,4 @@
-**# kali-vm-init
+# kali-vm-init
 
 A single script to configure a fresh Kali Linux VM with a consistent, repeatable pentest environment.
 

@@ -9,11 +9,11 @@ Written for **zsh**, the default shell on modern Kali.
 
 | Component | Description |
 |-----------|-------------|
-| System update | Runs `apt update`, `apt full-upgrade`, and `apt autoremove` before anything else |
-| Python venv | Isolated environment at `~/.venvs/pentest` with common pentest libraries pre-installed |
-| GVM / OpenVAS | Full Greenbone stack with a `gvm-connect` helper to interface with the local socket |
-| Vulnscan | Clones `scipag/vulscan` and symlinks it into Nmap's script directory for direct use in `nmap` commands |
-| CopyQ | GUI clipboard manager — records every `Ctrl+C`, press `Win+V` to browse history and paste any previous item |
+| System update | `apt update`, `apt full-upgrade`, `apt autoremove` |
+| Python venv | `~/.venvs/pentest` with common pentest libraries |
+| GVM / OpenVAS | Full Greenbone stack + `gvm-connect` socket helper |
+| Vulnscan | Cloned and symlinked into Nmap's script directory |
+| CopyQ | GUI clipboard history — open with `Win+V` |
 
 ---
 
@@ -35,100 +35,44 @@ bash <(curl -fsSL https://raw.githubusercontent.com/1ch4k/kali-vm-init/main/kali
 
 ---
 
-## System update
-
-The first thing the script does on every run is a full system update:
-
-```zsh
-sudo apt update
-sudo apt full-upgrade -y
-sudo apt autoremove -y
-```
-
-This ensures the machine is fully patched before any tooling is installed.
-
----
-
-## Clipboard history
-
-CopyQ runs silently in the background and records everything you copy.
+## Clipboard — CopyQ
 
 | Action | Shortcut |
 |--------|----------|
-| Copy | `Ctrl+C` — unchanged |
-| Paste | `Ctrl+V` — unchanged |
-| Open history picker | `Win+V` — opens GUI window with all copied items |
-| Paste an item from history | Click it, or use arrow keys and `Enter` |
+| Copy | `Ctrl+C` |
+| Paste | `Ctrl+V` |
+| Open clipboard history | `Win+V` |
 
-Starts automatically at login. Up to 200 items stored.  
-To change the shortcut: CopyQ → File → Preferences → Global Shortcuts.
+The `Win+V` shortcut is registered automatically via XFCE keyboard shortcuts on install.  
+To change it: Settings → Keyboard → Application Shortcuts → find `copyq toggle`.
 
 ---
 
-## Vulnscan in Nmap
-
-Vulnscan is installed as an Nmap NSE script with no wrapper command. Use it directly:
+## Vulnscan
 
 ```zsh
-# Standard scan
 sudo nmap -sV --script=vulscan/vulscan.nse <target>
-
-# Specific ports
-sudo nmap -sV -p 80,443,8080 --script=vulscan/vulscan.nse <target>
-
-# Target a specific CVE database
 sudo nmap -sV --script=vulscan/vulscan.nse --script-args vulscandb=exploitdb.csv <target>
 ```
-
-Available databases inside `~/tools/vulnscan/`: `exploitdb.csv`, `osvdb.csv`, `securitytracker.csv`, `xforce.csv`, `scipvuldb.csv`, `openvas.csv`.
 
 ---
 
 ## Python venv
 
 ```zsh
-# Activate
 source ~/.venvs/pentest/bin/activate
-
-# Deactivate
 deactivate
 ```
 
-Libraries included: `requests`, `paramiko`, `impacket`, `python-nmap`, `scapy`, `colorama`, `pwntools`, `gvm-tools`.
+Libraries: `requests`, `paramiko`, `impacket`, `python-nmap`, `scapy`, `colorama`, `pwntools`, `gvm-tools`.
 
 ---
 
 ## GVM / OpenVAS
 
 ```zsh
-# Start services
 sudo gvm-start
-
-# Connect via socket
-gvm-connect        # alias: gvmc
-```
-
----
-
-## Directory layout
-
-```
-$HOME/
-├── .local/bin/              <- gvm-connect
-├── .venvs/
-│   └── pentest/
-├── .config/
-│   ├── autostart/
-│   │   └── copyq.desktop
-│   └── copyq/
-│       └── copyq.conf
-└── tools/
-    ├── gvm/
-    │   └── gvm-connect.sh
-    └── vulnscan/
-
-/usr/share/nmap/scripts/
-└── vulscan -> ~/tools/vulnscan
+gvm-connect   # alias: gvmc
 ```
 
 ---
@@ -137,5 +81,11 @@ $HOME/
 
 - Kali Linux
 - Non-root user with sudo access
-- Desktop environment for CopyQ GUI (XFCE, GNOME, etc.)
-- Internet access for `apt` and `git`
+- XFCE desktop (default on Kali)
+- Internet access
+
+---
+
+## Notes
+
+Idempotent — safe to run multiple times. The system update always runs. Everything else is skipped if already present.

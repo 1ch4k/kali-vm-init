@@ -20,17 +20,13 @@ section() {
     print -P "${BOLD}${CYAN}══════════════════════════════════════${RESET}"
 }
 
-# ── Detect shell config file ──────────────────────────────────────────────────
 SHELL_RC="$HOME/.zshrc"
-
-# ── Paths ─────────────────────────────────────────────────────────────────────
 TOOLS_DIR="$HOME/tools"
 VENV_DIR="$HOME/.venvs/pentest"
 VULNSCAN_DIR="$TOOLS_DIR/vulnscan"
 GVM_DIR="$TOOLS_DIR/gvm"
 BIN_DIR="$HOME/.local/bin"
 
-# ── Ensure local bin is in PATH ───────────────────────────────────────────────
 mkdir -p "$BIN_DIR"
 if ! grep -q "$BIN_DIR" "$SHELL_RC" 2>/dev/null; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
@@ -40,7 +36,7 @@ fi
 # =============================================================================
 section "1 · Full system update"
 # =============================================================================
-log "Running full system update..."
+log "Updating package lists..."
 sudo apt update
 
 log "Running full-upgrade..."
@@ -79,7 +75,7 @@ fi
 
 source "$VENV_DIR/bin/activate"
 
-log "Upgrading pip inside venv..."
+log "Upgrading pip..."
 pip install --upgrade pip setuptools wheel -q
 
 log "Installing pentest Python libraries..."
@@ -101,17 +97,17 @@ section "4 · GVM / OpenVAS tools"
 # =============================================================================
 mkdir -p "$GVM_DIR"
 
-log "Checking for system GVM daemon (gvmd)..."
+log "Checking for gvmd..."
 if command -v gvmd &>/dev/null; then
     info "gvmd found: $(gvmd --version 2>/dev/null | head -1)"
 else
     warn "gvmd not found. Installing Greenbone OpenVAS stack..."
     sudo apt install -y \
         gvm openvas gvmd gsa gsad \
-        2>/dev/null || warn "Some GVM packages may not be available — check your Kali repo."
+        2>/dev/null || warn "Some GVM packages unavailable — check your Kali repo."
 
-    log "Running gvm-setup (this can take several minutes)..."
     if command -v gvm-setup &>/dev/null; then
+        log "Running gvm-setup (this can take several minutes)..."
         sudo gvm-setup 2>&1 | tee "$GVM_DIR/setup.log" \
             || warn "gvm-setup finished with warnings — check $GVM_DIR/setup.log"
     fi
@@ -138,7 +134,7 @@ if [[ -d "$VULNSCAN_DIR/.git" ]]; then
     warn "Vulnscan already cloned — pulling latest..."
     git -C "$VULNSCAN_DIR" pull --ff-only
 else
-    log "Cloning Vulnscan into $VULNSCAN_DIR ..."
+    log "Cloning Vulnscan..."
     git clone --depth=1 https://github.com/scipag/vulscan.git "$VULNSCAN_DIR"
 fi
 
@@ -146,7 +142,7 @@ NMAP_SCRIPTS_DIR="/usr/share/nmap/scripts"
 VULSCAN_LINK="$NMAP_SCRIPTS_DIR/vulscan"
 
 if [[ -L "$VULSCAN_LINK" ]]; then
-    info "Vulscan symlink already exists at $VULSCAN_LINK"
+    info "Vulscan symlink already exists."
 elif [[ -d "$VULSCAN_LINK" ]]; then
     warn "Vulscan directory already at $NMAP_SCRIPTS_DIR — skipping symlink."
 else
@@ -157,17 +153,11 @@ fi
 log "Updating Nmap script database..."
 sudo nmap --script-updatedb -q 2>/dev/null || warn "nmap --script-updatedb failed (non-fatal)"
 
-info "Vulnscan ready. Example usage:"
-info "  sudo nmap -sV --script=vulscan/vulscan.nse <target>"
+info "Vulnscan ready:  sudo nmap -sV --script=vulscan/vulscan.nse <target>"
 
 # =============================================================================
 section "6 · CopyQ — GUI clipboard manager (Win+V opens history)"
 # =============================================================================
-#
-#  Ctrl+C  = copy   (unchanged)
-#  Ctrl+V  = paste  (unchanged)
-#  Win+V   = open CopyQ history picker
-#
 log "Installing CopyQ..."
 if ! command -v copyq &>/dev/null; then
     sudo apt install -y copyq 2>/dev/null \
@@ -176,7 +166,7 @@ if ! command -v copyq &>/dev/null; then
              sudo flatpak remote-add --if-not-exists flathub \
                  https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null;
              sudo flatpak install -y flathub com.github.hluk.copyq 2>/dev/null \
-                 || warn "Could not auto-install CopyQ. Run manually: sudo apt install copyq"; }
+                 || warn "Could not install CopyQ. Run manually: sudo apt install copyq"; }
 else
     info "CopyQ already installed."
 fi
@@ -200,7 +190,7 @@ X-GNOME-Autostart-enabled=true
 EOF
     log "CopyQ set to autostart on login."
 
-    # Global shortcut: Win+V (meta+v) → open clipboard history
+    # Write CopyQ config (internal shortcut — fallback)
     COPYQ_CFG_DIR="$HOME/.config/copyq"
     mkdir -p "$COPYQ_CFG_DIR"
     COPYQ_CFG="$COPYQ_CFG_DIR/copyq.conf"
@@ -215,10 +205,19 @@ savedelay=5000
 [GlobalShortcuts]
 toggle=meta+v
 EOF
-        log "Global shortcut configured: Win+V → open CopyQ history"
+    fi
+
+    # Register Win+V via XFCE keyboard shortcuts (reliable on Kali/XFCE)
+    if command -v xfconf-query &>/dev/null; then
+        xfconf-query \
+            -c xfce4-keyboard-shortcuts \
+            -p "/commands/custom/<Super>v" \
+            -n -t string -s "copyq toggle" 2>/dev/null \
+            && log "Win+V shortcut registered via XFCE keyboard shortcuts." \
+            || warn "xfconf-query failed — set Win+V manually in Settings → Keyboard → Application Shortcuts."
     else
-        info "CopyQ config already exists — shortcut not overwritten."
-        info "To change it: CopyQ → File → Preferences → Global Shortcuts"
+        warn "xfconf-query not found — set Win+V manually in Settings → Keyboard → Application Shortcuts."
+        warn "Command to bind:  copyq toggle"
     fi
 
     # Start CopyQ now

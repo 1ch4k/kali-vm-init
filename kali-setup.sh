@@ -1,7 +1,8 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # =============================================================================
 #  kali-setup.sh — Fresh Kali VM bootstrapper
-#  Installs: Python venv · GVM tools · Vulnscan (nmap scripts) · CopyQ
+#  Shell: zsh (default on modern Kali)
+#  Installs: full system update · Python venv · GVM · Vulnscan · CopyQ
 # =============================================================================
 
 set -euo pipefail
@@ -10,14 +11,17 @@ set -euo pipefail
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
 
-log()     { echo -e "${GREEN}[+]${RESET} $*"; }
-info()    { echo -e "${CYAN}[i]${RESET} $*"; }
-warn()    { echo -e "${YELLOW}[!]${RESET} $*"; }
+log()     { print -P "${GREEN}[+]${RESET} $*" }
+info()    { print -P "${CYAN}[i]${RESET} $*" }
+warn()    { print -P "${YELLOW}[!]${RESET} $*" }
 section() {
-    echo -e "\n${BOLD}${CYAN}══════════════════════════════════════${RESET}"
-    echo -e "${BOLD}${CYAN}  $*${RESET}"
-    echo -e "${BOLD}${CYAN}══════════════════════════════════════${RESET}"
+    print -P "\n${BOLD}${CYAN}══════════════════════════════════════${RESET}"
+    print -P "${BOLD}${CYAN}  $*${RESET}"
+    print -P "${BOLD}${CYAN}══════════════════════════════════════${RESET}"
 }
+
+# ── Detect shell config file ──────────────────────────────────────────────────
+SHELL_RC="$HOME/.zshrc"
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 TOOLS_DIR="$HOME/tools"
@@ -28,33 +32,44 @@ BIN_DIR="$HOME/.local/bin"
 
 # ── Ensure local bin is in PATH ───────────────────────────────────────────────
 mkdir -p "$BIN_DIR"
-if ! echo "$PATH" | grep -q "$BIN_DIR"; then
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+if ! grep -q "$BIN_DIR" "$SHELL_RC" 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_RC"
     export PATH="$BIN_DIR:$PATH"
 fi
 
 # =============================================================================
-section "1 · System update & base dependencies"
+section "1 · Full system update"
 # =============================================================================
-log "Updating package lists..."
-sudo apt-get update -qq
+log "Running full system update..."
+sudo apt update
 
+log "Running full-upgrade..."
+sudo apt full-upgrade -y
+
+log "Removing unused packages..."
+sudo apt autoremove -y
+
+log "System is up to date."
+
+# =============================================================================
+section "2 · Base dependencies"
+# =============================================================================
 log "Installing base packages..."
-sudo apt-get install -y -qq \
+sudo apt install -y \
     python3 python3-pip python3-venv python3-dev \
     git curl wget unzip build-essential \
     libssl-dev libffi-dev \
     nmap \
-    2>/dev/null
+    zsh
 
 log "Base packages installed."
 
 # =============================================================================
-section "2 · Python virtual environment"
+section "3 · Python virtual environment"
 # =============================================================================
 mkdir -p "$(dirname "$VENV_DIR")"
 
-if [ -d "$VENV_DIR" ]; then
+if [[ -d "$VENV_DIR" ]]; then
     warn "Venv already exists at $VENV_DIR — skipping creation."
 else
     log "Creating Python venv at $VENV_DIR ..."
@@ -63,13 +78,12 @@ else
 fi
 
 # Activate for the rest of this script
-# shellcheck source=/dev/null
 source "$VENV_DIR/bin/activate"
 
 log "Upgrading pip inside venv..."
 pip install --upgrade pip setuptools wheel -q
 
-log "Installing common pentest Python libraries..."
+log "Installing pentest Python libraries..."
 pip install -q \
     requests \
     paramiko \
@@ -84,7 +98,7 @@ log "Python venv ready at: $VENV_DIR"
 info "Activate manually with:  source $VENV_DIR/bin/activate"
 
 # =============================================================================
-section "3 · GVM / OpenVAS tools"
+section "4 · GVM / OpenVAS tools"
 # =============================================================================
 mkdir -p "$GVM_DIR"
 
@@ -93,7 +107,7 @@ if command -v gvmd &>/dev/null; then
     info "gvmd found: $(gvmd --version 2>/dev/null | head -1)"
 else
     warn "gvmd not found. Installing Greenbone OpenVAS stack..."
-    sudo apt-get install -y -qq \
+    sudo apt install -y \
         gvm openvas gvmd gsa gsad \
         2>/dev/null || warn "Some GVM packages may not be available — check your Kali repo."
 
@@ -106,9 +120,9 @@ fi
 
 # GVM quick-connect helper
 cat > "$GVM_DIR/gvm-connect.sh" << 'EOF'
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 GVM_SOCKET="/run/gvmd/gvmd.sock"
-if [ ! -S "$GVM_SOCKET" ]; then
+if [[ ! -S "$GVM_SOCKET" ]]; then
     echo "[!] GVM socket not found. Start GVM with:  sudo gvm-start"
     exit 1
 fi
@@ -120,15 +134,9 @@ ln -sf "$GVM_DIR/gvm-connect.sh" "$BIN_DIR/gvm-connect"
 log "GVM connect helper linked → 'gvm-connect'"
 
 # =============================================================================
-section "4 · Vulnscan — install for use in Nmap commands"
+section "5 · Vulnscan — Nmap NSE script"
 # =============================================================================
-#
-#  Vulnscan is installed as an Nmap NSE script only.
-#  No wrapper command is created — use it directly in your nmap calls:
-#
-#    sudo nmap -sV --script=vulscan/vulscan.nse <target>
-#
-if [ -d "$VULNSCAN_DIR/.git" ]; then
+if [[ -d "$VULNSCAN_DIR/.git" ]]; then
     warn "Vulnscan already cloned — pulling latest..."
     git -C "$VULNSCAN_DIR" pull --ff-only
 else
@@ -139,9 +147,9 @@ fi
 NMAP_SCRIPTS_DIR="/usr/share/nmap/scripts"
 VULSCAN_LINK="$NMAP_SCRIPTS_DIR/vulscan"
 
-if [ -L "$VULSCAN_LINK" ]; then
+if [[ -L "$VULSCAN_LINK" ]]; then
     info "Vulscan symlink already exists at $VULSCAN_LINK"
-elif [ -d "$VULSCAN_LINK" ]; then
+elif [[ -d "$VULSCAN_LINK" ]]; then
     warn "Vulscan directory already at $NMAP_SCRIPTS_DIR — skipping symlink."
 else
     log "Creating symlink: $VULSCAN_LINK → $VULNSCAN_DIR"
@@ -151,25 +159,17 @@ fi
 log "Updating Nmap script database..."
 sudo nmap --script-updatedb -q 2>/dev/null || warn "nmap --script-updatedb failed (non-fatal)"
 
-info "Vulnscan ready. Use it in nmap:"
+info "Vulnscan ready. Example usage:"
 info "  sudo nmap -sV --script=vulscan/vulscan.nse <target>"
 
 # =============================================================================
-section "5 · CopyQ — GUI clipboard manager (Ctrl+V opens history)"
+section "6 · CopyQ — GUI clipboard manager (Ctrl+V opens history)"
 # =============================================================================
-#
-#  CopyQ records every Ctrl+C into a persistent history list.
-#  Press Ctrl+V to pop open the GUI picker and click any previous
-#  item to paste it — exactly like Win+V on Windows.
-#
-#  NOTE: Ctrl+V is remapped as the CopyQ global toggle. Inside terminals
-#  the standard terminal paste shortcut is Ctrl+Shift+V (unchanged).
-#
 log "Installing CopyQ..."
 if ! command -v copyq &>/dev/null; then
-    sudo apt-get install -y -qq copyq 2>/dev/null \
+    sudo apt install -y copyq 2>/dev/null \
         || { warn "CopyQ not in apt — trying flatpak...";
-             sudo apt-get install -y -qq flatpak 2>/dev/null;
+             sudo apt install -y flatpak 2>/dev/null;
              sudo flatpak remote-add --if-not-exists flathub \
                  https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null;
              sudo flatpak install -y flathub com.github.hluk.copyq 2>/dev/null \
@@ -181,10 +181,9 @@ fi
 if command -v copyq &>/dev/null; then
     log "CopyQ installed: $(copyq --version 2>/dev/null | head -1)"
 
-    # ── Autostart on every login ──────────────────────────────────────────────
+    # Autostart on login
     AUTOSTART_DIR="$HOME/.config/autostart"
     mkdir -p "$AUTOSTART_DIR"
-
     cat > "$AUTOSTART_DIR/copyq.desktop" << 'EOF'
 [Desktop Entry]
 Type=Application
@@ -198,12 +197,12 @@ X-GNOME-Autostart-enabled=true
 EOF
     log "CopyQ set to autostart on login."
 
-    # ── Global shortcut: Ctrl+V → open clipboard history GUI ─────────────────
+    # Global shortcut: Ctrl+V → open clipboard history
     COPYQ_CFG_DIR="$HOME/.config/copyq"
     mkdir -p "$COPYQ_CFG_DIR"
     COPYQ_CFG="$COPYQ_CFG_DIR/copyq.conf"
 
-    if [ ! -f "$COPYQ_CFG" ] || ! grep -q "toggle" "$COPYQ_CFG" 2>/dev/null; then
+    if [[ ! -f "$COPYQ_CFG" ]] || ! grep -q "toggle" "$COPYQ_CFG" 2>/dev/null; then
         cat > "$COPYQ_CFG" << 'EOF'
 [General]
 autostart=true
@@ -216,10 +215,9 @@ EOF
         log "Global shortcut configured: Ctrl+V → open CopyQ history"
     else
         info "CopyQ config already exists — shortcut not overwritten."
-        info "To change it: CopyQ → File → Preferences → Global Shortcuts"
     fi
 
-    # Start CopyQ now without waiting for a reboot
+    # Start CopyQ now
     if ! pgrep -x copyq &>/dev/null; then
         copyq &
         disown
@@ -227,45 +225,34 @@ EOF
     else
         info "CopyQ is already running."
     fi
-
-    echo ""
-    echo -e "  ${BOLD}┌─ How to use CopyQ ─────────────────────────────────────────┐${RESET}"
-    echo -e "  ${BOLD}│${RESET}  1. Copy anything normally with  ${CYAN}Ctrl+C${RESET}                  ${BOLD}│${RESET}"
-    echo -e "  ${BOLD}│${RESET}  2. Press  ${CYAN}Ctrl+V${RESET}  to open the clipboard history window  ${BOLD}│${RESET}"
-    echo -e "  ${BOLD}│${RESET}  3. Click (or arrow + Enter) any item to paste it        ${BOLD}│${RESET}"
-    echo -e "  ${BOLD}│${RESET}  4. Stores up to 200 items · starts at every login       ${BOLD}│${RESET}"
-    echo -e "  ${BOLD}│${RESET}  ${YELLOW}Note:${RESET} terminal paste stays on  ${CYAN}Ctrl+Shift+V${RESET}             ${BOLD}│${RESET}"
-    echo -e "  ${BOLD}└────────────────────────────────────────────────────────────┘${RESET}"
-    echo ""
 else
-    warn "CopyQ installation could not be completed."
-    warn "Install it manually:  sudo apt install copyq"
+    warn "CopyQ could not be installed. Run manually: sudo apt install copyq"
 fi
 
 # =============================================================================
-section "6 · Shell aliases"
+section "7 · Zsh aliases"
 # =============================================================================
-if ! grep -q "# kali-setup aliases" "$HOME/.bashrc" 2>/dev/null; then
-    cat >> "$HOME/.bashrc" << EOF
+if ! grep -q "# kali-vm-init aliases" "$SHELL_RC" 2>/dev/null; then
+    cat >> "$SHELL_RC" << EOF
 
-# ── kali-setup aliases ────────────────────────────────────────────────────────
+# kali-vm-init aliases
 alias gvmc='gvm-connect'
-alias update-tools='cd $TOOLS_DIR && for d in */; do [ -d "\$d/.git" ] && echo "→ \$d" && git -C "\$d" pull --ff-only; done'
+alias update-tools='cd $TOOLS_DIR && for d in */; do [[ -d "\$d/.git" ]] && echo "→ \$d" && git -C "\$d" pull --ff-only; done'
 EOF
-    log "Aliases added to .bashrc"
+    log "Aliases added to $SHELL_RC"
 fi
 
 # =============================================================================
-section "✅  Setup complete!"
+section "Setup complete"
 # =============================================================================
-echo ""
-echo -e "${BOLD}${GREEN}  Everything is installed. Quick reference:${RESET}"
-echo ""
-echo -e "  ${CYAN}source ~/.venvs/pentest/bin/activate${RESET}                Activate Python venv"
-echo -e "  ${CYAN}Ctrl+C  →  Ctrl+V${RESET}                                  Open CopyQ history GUI"
-echo -e "  ${CYAN}sudo nmap -sV --script=vulscan/vulscan.nse <host>${RESET}   Run Vulscan"
-echo -e "  ${CYAN}gvm-connect  (alias: gvmc)${RESET}                         Connect to GVM socket"
-echo -e "  ${CYAN}update-tools${RESET}                                        Git-pull all ~/tools"
-echo ""
-echo -e "  ${YELLOW}Reload your shell:  source ~/.bashrc${RESET}"
-echo ""
+print ""
+print -P "${BOLD}${GREEN}  Quick reference:${RESET}"
+print ""
+print -P "  ${CYAN}source ~/.venvs/pentest/bin/activate${RESET}                Activate Python venv"
+print -P "  ${CYAN}Ctrl+C  ->  Ctrl+V${RESET}                                  Open CopyQ history GUI"
+print -P "  ${CYAN}sudo nmap -sV --script=vulscan/vulscan.nse <host>${RESET}   Run Vulscan"
+print -P "  ${CYAN}gvm-connect  (alias: gvmc)${RESET}                         Connect to GVM socket"
+print -P "  ${CYAN}update-tools${RESET}                                        Git-pull all ~/tools"
+print ""
+print -P "  ${YELLOW}Reload your shell:  source ~/.zshrc${RESET}"
+print ""

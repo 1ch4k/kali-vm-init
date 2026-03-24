@@ -1,6 +1,7 @@
 # kali-vm-init
 
-A single script to configure a fresh Kali Linux VM with a consistent, repeatable pentest environment.
+A single script to configure a fresh Kali Linux VM with a consistent, repeatable pentest environment.  
+Written for **zsh**, the default shell on modern Kali.
 
 ---
 
@@ -8,6 +9,7 @@ A single script to configure a fresh Kali Linux VM with a consistent, repeatable
 
 | Component | Description |
 |-----------|-------------|
+| System update | Runs `apt update`, `apt full-upgrade`, and `apt autoremove` before anything else |
 | Python venv | Isolated environment at `~/.venvs/pentest` with common pentest libraries pre-installed |
 | GVM / OpenVAS | Full Greenbone stack with a `gvm-connect` helper to interface with the local socket |
 | Vulnscan | Clones `scipag/vulscan` and symlinks it into Nmap's script directory for direct use in `nmap` commands |
@@ -17,19 +19,33 @@ A single script to configure a fresh Kali Linux VM with a consistent, repeatable
 
 ## Usage
 
-```bash
+```zsh
 git clone https://github.com/1ch4k/kali-vm-init.git
 cd kali-vm-init
 chmod +x kali-setup.sh
 ./kali-setup.sh
-source ~/.bashrc
+source ~/.zshrc
 ```
 
 One-liner on a fresh machine:
 
-```bash
+```zsh
 bash <(curl -fsSL https://raw.githubusercontent.com/1ch4k/kali-vm-init/main/kali-setup.sh)
 ```
+
+---
+
+## System update
+
+The first thing the script does on every run is a full system update:
+
+```zsh
+sudo apt update
+sudo apt full-upgrade -y
+sudo apt autoremove -y
+```
+
+This ensures the machine is fully patched before any tooling is installed.
 
 ---
 
@@ -53,7 +69,7 @@ To change the shortcut: CopyQ → File → Preferences → Global Shortcuts.
 
 Vulnscan is installed as an Nmap NSE script with no wrapper command. Use it directly:
 
-```bash
+```zsh
 # Standard scan
 sudo nmap -sV --script=vulscan/vulscan.nse <target>
 
@@ -70,7 +86,7 @@ Available databases inside `~/tools/vulnscan/`: `exploitdb.csv`, `osvdb.csv`, `s
 
 ## Python venv
 
-```bash
+```zsh
 # Activate
 source ~/.venvs/pentest/bin/activate
 
@@ -84,7 +100,7 @@ Libraries included: `requests`, `paramiko`, `impacket`, `python-nmap`, `scapy`, 
 
 ## GVM / OpenVAS
 
-```bash
+```zsh
 # Start services
 sudo gvm-start
 
@@ -120,12 +136,6 @@ $HOME/
 ## Requirements
 
 - Kali Linux rolling
+- Non-root user with sudo access
 - Desktop environment for CopyQ GUI (XFCE, GNOME, etc.)
 - Internet access for `apt` and `git`
-
----
-
-## Notes
-
-The script is idempotent. Running it multiple times is safe — existing repos are updated with `git pull`, existing venvs and symlinks are left untouched, and aliases are only written once.
-

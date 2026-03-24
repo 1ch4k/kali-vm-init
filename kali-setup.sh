@@ -77,7 +77,6 @@ else
     log "Venv created."
 fi
 
-# Activate for the rest of this script
 source "$VENV_DIR/bin/activate"
 
 log "Upgrading pip inside venv..."
@@ -118,7 +117,6 @@ else
     fi
 fi
 
-# GVM quick-connect helper
 cat > "$GVM_DIR/gvm-connect.sh" << 'EOF'
 #!/usr/bin/env zsh
 GVM_SOCKET="/run/gvmd/gvmd.sock"
@@ -163,8 +161,13 @@ info "Vulnscan ready. Example usage:"
 info "  sudo nmap -sV --script=vulscan/vulscan.nse <target>"
 
 # =============================================================================
-section "6 · CopyQ — GUI clipboard manager (Ctrl+V opens history)"
+section "6 · CopyQ — GUI clipboard manager (Win+V opens history)"
 # =============================================================================
+#
+#  Ctrl+C  = copy   (unchanged)
+#  Ctrl+V  = paste  (unchanged)
+#  Win+V   = open CopyQ history picker
+#
 log "Installing CopyQ..."
 if ! command -v copyq &>/dev/null; then
     sudo apt install -y copyq 2>/dev/null \
@@ -197,7 +200,7 @@ X-GNOME-Autostart-enabled=true
 EOF
     log "CopyQ set to autostart on login."
 
-    # Global shortcut: Ctrl+V → open clipboard history
+    # Global shortcut: Win+V (meta+v) → open clipboard history
     COPYQ_CFG_DIR="$HOME/.config/copyq"
     mkdir -p "$COPYQ_CFG_DIR"
     COPYQ_CFG="$COPYQ_CFG_DIR/copyq.conf"
@@ -210,11 +213,12 @@ maxitems=200
 savedelay=5000
 
 [GlobalShortcuts]
-toggle=ctrl+v
+toggle=meta+v
 EOF
-        log "Global shortcut configured: Ctrl+V → open CopyQ history"
+        log "Global shortcut configured: Win+V → open CopyQ history"
     else
         info "CopyQ config already exists — shortcut not overwritten."
+        info "To change it: CopyQ → File → Preferences → Global Shortcuts"
     fi
 
     # Start CopyQ now
@@ -249,10 +253,11 @@ print ""
 print -P "${BOLD}${GREEN}  Quick reference:${RESET}"
 print ""
 print -P "  ${CYAN}source ~/.venvs/pentest/bin/activate${RESET}                Activate Python venv"
-print -P "  ${CYAN}Ctrl+C  ->  Ctrl+V${RESET}                                  Open CopyQ history GUI"
+print -P "  ${CYAN}Ctrl+C / Ctrl+V${RESET}                                     Copy and paste (unchanged)"
+print -P "  ${CYAN}Win+V${RESET}                                                Open CopyQ clipboard history"
 print -P "  ${CYAN}sudo nmap -sV --script=vulscan/vulscan.nse <host>${RESET}   Run Vulscan"
-print -P "  ${CYAN}gvm-connect  (alias: gvmc)${RESET}                         Connect to GVM socket"
-print -P "  ${CYAN}update-tools${RESET}                                        Git-pull all ~/tools"
+print -P "  ${CYAN}gvm-connect  (alias: gvmc)${RESET}                          Connect to GVM socket"
+print -P "  ${CYAN}update-tools${RESET}                                         Git-pull all ~/tools"
 print ""
 print -P "  ${YELLOW}Reload your shell:  source ~/.zshrc${RESET}"
 print ""

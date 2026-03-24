@@ -13,7 +13,7 @@ Written for **zsh**, the default shell on modern Kali.
 | Python venv | Isolated environment at `~/.venvs/pentest` with common pentest libraries pre-installed |
 | GVM / OpenVAS | Full Greenbone stack with a `gvm-connect` helper to interface with the local socket |
 | Vulnscan | Clones `scipag/vulscan` and symlinks it into Nmap's script directory for direct use in `nmap` commands |
-| CopyQ | GUI clipboard manager — records every `Ctrl+C`, press `Ctrl+V` to browse history and paste any previous item |
+| CopyQ | GUI clipboard manager — records every `Ctrl+C`, press `Win+V` to browse history and paste any previous item |
 
 ---
 
@@ -55,10 +55,10 @@ CopyQ runs silently in the background and records everything you copy.
 
 | Action | Shortcut |
 |--------|----------|
-| Copy | `Ctrl+C` — as normal |
-| Open history picker | `Ctrl+V` — opens GUI window with all copied items |
-| Paste an item | Click it, or use arrow keys and `Enter` |
-| Terminal paste | `Ctrl+Shift+V` — unchanged |
+| Copy | `Ctrl+C` — unchanged |
+| Paste | `Ctrl+V` — unchanged |
+| Open history picker | `Win+V` — opens GUI window with all copied items |
+| Paste an item from history | Click it, or use arrow keys and `Enter` |
 
 Starts automatically at login. Up to 200 items stored.  
 To change the shortcut: CopyQ → File → Preferences → Global Shortcuts.
@@ -135,7 +135,7 @@ $HOME/
 
 ## Requirements
 
-- Kali Linux rolling
+- Kali Linux
 - Non-root user with sudo access
 - Desktop environment for CopyQ GUI (XFCE, GNOME, etc.)
 - Internet access for `apt` and `git`
